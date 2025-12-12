@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { StepCard } from './components/StepCard';
 import { AdvancedTab } from './components/AdvancedTab';
 import { AiHelpTab } from './components/AiHelpTab';
@@ -14,13 +14,14 @@ const App: React.FC = () => {
     const [workflowData, setWorkflowData] = useState<Step[]>(INITIAL_WORKFLOW);
     const [isLoaded, setIsLoaded] = useState(false);
 
-    // Smart Persistence Logic (Hydration)
+    // Smart Persistence Logic (Hydration & Fail-Safe)
     useEffect(() => {
         try {
             const saved = localStorage.getItem('central_v4');
             if (saved) {
                 const parsed = JSON.parse(saved);
                 
+                // Robustness check: Ensure parsed data is actually an array
                 if (Array.isArray(parsed) && parsed.length > 0) {
                     const mergedData = INITIAL_WORKFLOW.map(freshStep => {
                         const savedStep = parsed.find((s: Step) => s.id === freshStep.id);
@@ -35,10 +36,16 @@ const App: React.FC = () => {
                         };
                     });
                     setWorkflowData(mergedData);
+                } else {
+                    // Start fresh if data structure doesn't match expected array
+                    throw new Error("Invalid storage structure detected");
                 }
             }
         } catch (e) {
-            console.error("Failed to load state", e);
+            console.warn("Storage corruption detected. Resetting to default state.", e);
+            // Fallback: Clear corrupted data to prevent future boot loops
+            localStorage.removeItem('central_v4');
+            setWorkflowData(INITIAL_WORKFLOW);
         } finally {
             setIsLoaded(true);
         }
@@ -60,17 +67,24 @@ const App: React.FC = () => {
         }));
     };
 
+    // UX Improvement: Soft Reset without page reload
     const resetProgress = () => {
         if(confirm("Reiniciar todo o progresso?")) {
             localStorage.removeItem('central_v4');
             setWorkflowData(INITIAL_WORKFLOW);
-            window.location.reload();
+            setActiveTab('workflow'); // Reset view to start
+            setShowModal(true); // Optional: Show welcome modal again
         }
     };
 
-    const totalTasks = workflowData.reduce((acc, s) => acc + s.tasks.length, 0);
-    const completedTasks = workflowData.reduce((acc, s) => acc + s.tasks.filter(t => t.done).length, 0);
-    const progress = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
+    // Performance Optimization: Memoize progress calculation
+    const { totalTasks, completedTasks, progress } = useMemo(() => {
+        const total = workflowData.reduce((acc, s) => acc + s.tasks.length, 0);
+        const completed = workflowData.reduce((acc, s) => acc + s.tasks.filter(t => t.done).length, 0);
+        const prog = total === 0 ? 0 : Math.round((completed / total) * 100);
+        
+        return { totalTasks: total, completedTasks: completed, progress: prog };
+    }, [workflowData]);
 
     return (
         <div className="max-w-4xl mx-auto p-4 md:p-8 min-h-screen font-sans text-slate-200">
