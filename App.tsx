@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StepCard } from './components/StepCard';
 import { AdvancedTab } from './components/AdvancedTab';
 import { AiHelpTab } from './components/AiHelpTab';
+import { ToolsTab } from './components/ToolsTab';
 import { PrereqModal } from './components/PrereqModal';
 import { GetIcon } from './components/Icons';
 import { INITIAL_WORKFLOW } from './constants';
@@ -21,19 +22,14 @@ const App: React.FC = () => {
                 const parsed = JSON.parse(saved);
                 
                 if (Array.isArray(parsed) && parsed.length > 0) {
-                    // Critical Fix: Don't just replace state with saved data.
-                    // Merge saved 'done' status onto the FRESH INITIAL_WORKFLOW structure.
-                    // This ensures users get UI updates (new icons, descriptions, visualTypes)
-                    // while keeping their progress checkmarks.
                     const mergedData = INITIAL_WORKFLOW.map(freshStep => {
                         const savedStep = parsed.find((s: Step) => s.id === freshStep.id);
                         if (!savedStep) return freshStep;
 
                         return {
-                            ...freshStep, // Keep fresh metadata (title, icon, visualType)
+                            ...freshStep,
                             tasks: freshStep.tasks.map(freshTask => {
                                 const savedTask = savedStep.tasks.find((t: Task) => t.id === freshTask.id);
-                                // Only restore the 'done' status, keep text/details fresh
                                 return savedTask ? { ...freshTask, done: savedTask.done } : freshTask;
                             })
                         };
@@ -130,17 +126,24 @@ const App: React.FC = () => {
                     Passo a Passo
                 </button>
                 <button 
+                    onClick={() => setActiveTab('tools')}
+                    className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'tools' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}
+                >
+                    {GetIcon('tool', "w-4 h-4")}
+                    Toolbox (Eng)
+                </button>
+                <button 
                     onClick={() => setActiveTab('advanced')}
                     className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'advanced' ? 'bg-orange-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}
                 >
-                    Avançado & Modelos
+                    Avançado
                 </button>
                 <button 
                     onClick={() => setActiveTab('ai_help')}
                     className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'ai_help' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}
                 >
                     {GetIcon('messageSquare', "w-4 h-4")}
-                    Ajuda IA (Beta)
+                    Ajuda IA
                 </button>
             </nav>
 
@@ -158,6 +161,8 @@ const App: React.FC = () => {
                     </React.Fragment>
                 ) : activeTab === 'advanced' ? (
                     <AdvancedTab />
+                ) : activeTab === 'tools' ? (
+                    <ToolsTab />
                 ) : (
                     <AiHelpTab />
                 )}
