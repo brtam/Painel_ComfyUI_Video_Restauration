@@ -1,0 +1,5 @@
+{
+  "name": "Central de Restauro Wan2.1",
+  "description": "Plataforma de engenharia de vídeo local para pré-processamento e upscaling de mídia legacy (MiniDV/VHS) utilizando fluxos de trabalho híbridos e ComfyUI.",
+  "requestFramePermissions": []
+}

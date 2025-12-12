@@ -1,0 +1,143 @@
+import React, { useState, useEffect } from 'react';
+import { StepCard } from './components/StepCard';
+import { AdvancedTab } from './components/AdvancedTab';
+import { PrereqModal } from './components/PrereqModal';
+import { GetIcon } from './components/Icons';
+import { INITIAL_WORKFLOW } from './constants';
+import { Step, TabType } from './types';
+
+const App: React.FC = () => {
+    const [activeTab, setActiveTab] = useState<TabType>('workflow');
+    const [showModal, setShowModal] = useState(true);
+    const [workflowData, setWorkflowData] = useState<Step[]>(INITIAL_WORKFLOW);
+
+    // Persistence Logic
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem('central_v4');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                // Simple validation check before setting state
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    setWorkflowData(parsed);
+                }
+            }
+        } catch (e) {
+            console.error("Failed to load state", e);
+        }
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem('central_v4', JSON.stringify(workflowData));
+    }, [workflowData]);
+
+    const toggleTask = (stepId: string, taskId: string) => {
+        setWorkflowData(prev => prev.map(step => {
+            if (step.id !== stepId) return step;
+            return {
+                ...step,
+                tasks: step.tasks.map(t => t.id === taskId ? { ...t, done: !t.done } : t)
+            };
+        }));
+    };
+
+    const resetProgress = () => {
+        if(confirm("Reiniciar todo o progresso?")) {
+            localStorage.removeItem('central_v4');
+            setWorkflowData(INITIAL_WORKFLOW);
+            window.location.reload();
+        }
+    };
+
+    const totalTasks = workflowData.reduce((acc, s) => acc + s.tasks.length, 0);
+    const completedTasks = workflowData.reduce((acc, s) => acc + s.tasks.filter(t => t.done).length, 0);
+    const progress = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
+
+    return (
+        <div className="max-w-4xl mx-auto p-4 md:p-8 min-h-screen font-sans text-slate-200">
+            {showModal && <PrereqModal onClose={() => setShowModal(false)} />}
+
+            {/* Header */}
+            <header className="mb-8 flex flex-col md:flex-row justify-between items-center border-b border-slate-800 pb-6 gap-6">
+                <div className="flex items-center gap-4">
+                    <div className="bg-gradient-to-br from-cyan-600 to-blue-700 p-3 rounded-xl shadow-lg shadow-cyan-900/30 ring-1 ring-cyan-500/50">
+                        {GetIcon('cpu', "w-8 h-8 text-white")}
+                    </div>
+                    <div>
+                        <h1 className="text-2xl font-bold text-white tracking-tight">Central de Restauro <span className="text-cyan-400">v4.0</span></h1>
+                        <p className="text-slate-400 text-xs uppercase tracking-wider font-bold mt-1 flex items-center gap-2">
+                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                             Engenharia Híbrida • RTX 3060
+                        </p>
+                    </div>
+                </div>
+                
+                <div className="flex flex-col items-end gap-2 w-full md:w-auto">
+                    <div className="flex justify-between items-center w-full md:w-64">
+                         <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Status Global</div>
+                         <div className={`font-mono font-bold text-sm ${progress === 100 ? 'text-emerald-400' : 'text-cyan-400'}`}>{progress}%</div>
+                    </div>
+                    
+                    {/* Segmented Progress Bar */}
+                    <div className="flex gap-1 w-full md:w-64 h-2">
+                        {Array.from({ length: totalTasks }).map((_, i) => (
+                            <div 
+                                key={i}
+                                className={`flex-1 rounded-full transition-all duration-500 ${i < completedTasks ? 'bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.6)]' : 'bg-slate-800'}`}
+                            ></div>
+                        ))}
+                    </div>
+
+                    <button 
+                        onClick={resetProgress} 
+                        className="text-[10px] text-slate-600 hover:text-red-400 flex items-center gap-1 mt-1 transition-colors" 
+                        title="Reiniciar Painel"
+                    >
+                        {GetIcon('rotateCcw', "w-3 h-3")} Reiniciar
+                    </button>
+                </div>
+            </header>
+
+            {/* Navigation */}
+            <nav className="flex gap-2 mb-8 bg-slate-900/50 p-1 rounded-lg border border-slate-800 w-fit mx-auto md:mx-0 shadow-sm">
+                <button 
+                    onClick={() => setActiveTab('workflow')}
+                    className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'workflow' ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}
+                >
+                    Passo a Passo
+                </button>
+                <button 
+                    onClick={() => setActiveTab('advanced')}
+                    className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'advanced' ? 'bg-orange-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}
+                >
+                    Avançado & Modelos
+                </button>
+            </nav>
+
+            {/* Main Content */}
+            <main className="animate-fade-in">
+                {activeTab === 'workflow' ? (
+                    <React.Fragment>
+                        {workflowData.map(step => (
+                            <StepCard 
+                                key={step.id} 
+                                step={step} 
+                                onToggleTask={toggleTask} 
+                            />
+                        ))}
+                    </React.Fragment>
+                ) : (
+                    <AdvancedTab />
+                )}
+            </main>
+
+            {/* Footer */}
+            <footer className="mt-12 text-center text-slate-600 text-[10px] border-t border-slate-800/50 pt-6">
+                <p className="uppercase tracking-widest font-bold mb-2">3D Creative • Engenharia Local • v4.0</p>
+                <p className="opacity-50">Sistema otimizado para operação offline e gestão de processos de alta performance.</p>
+            </footer>
+        </div>
+    );
+};
+
+export default App;
