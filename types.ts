@@ -25,4 +25,4 @@ export interface Step {
 
 export interface WorkflowData extends Array<Step> {}
 
-export type TabType = 'workflow' | 'advanced';
+export type TabType = 'workflow' | 'advanced' | 'ai_help';

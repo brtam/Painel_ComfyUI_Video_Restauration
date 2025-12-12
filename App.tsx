@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StepCard } from './components/StepCard';
 import { AdvancedTab } from './components/AdvancedTab';
+import { AiHelpTab } from './components/AiHelpTab';
 import { PrereqModal } from './components/PrereqModal';
 import { GetIcon } from './components/Icons';
 import { INITIAL_WORKFLOW } from './constants';
@@ -99,7 +100,7 @@ const App: React.FC = () => {
             </header>
 
             {/* Navigation */}
-            <nav className="flex gap-2 mb-8 bg-slate-900/50 p-1 rounded-lg border border-slate-800 w-fit mx-auto md:mx-0 shadow-sm">
+            <nav className="flex gap-2 mb-8 bg-slate-900/50 p-1 rounded-lg border border-slate-800 w-fit mx-auto md:mx-0 shadow-sm flex-wrap">
                 <button 
                     onClick={() => setActiveTab('workflow')}
                     className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'workflow' ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}
@@ -111,6 +112,13 @@ const App: React.FC = () => {
                     className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'advanced' ? 'bg-orange-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}
                 >
                     Avançado & Modelos
+                </button>
+                <button 
+                    onClick={() => setActiveTab('ai_help')}
+                    className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'ai_help' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}
+                >
+                    {GetIcon('messageSquare', "w-4 h-4")}
+                    Ajuda IA (Beta)
                 </button>
             </nav>
 
@@ -126,8 +134,10 @@ const App: React.FC = () => {
                             />
                         ))}
                     </React.Fragment>
-                ) : (
+                ) : activeTab === 'advanced' ? (
                     <AdvancedTab />
+                ) : (
+                    <AiHelpTab />
                 )}
             </main>
 
