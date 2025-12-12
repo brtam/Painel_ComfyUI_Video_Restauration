@@ -31,26 +31,29 @@ export const AiHelpTab: React.FC = () => {
 
         const userMsg = input;
         setInput('');
-        setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+        
+        // Optimistic update
+        const newHistory: Message[] = [...messages, { role: 'user', text: userMsg }];
+        setMessages(newHistory);
         setIsThinking(true);
 
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             
-            // Build conversation history for context
-            // Note: We only send the last few turns to keep context tight for "Lite" model speed, 
-            // but here we send the text. Ideally we map 'model' to 'model' role.
-            const contents = messages.map(m => ({
-                role: m.role,
-                parts: [{ text: m.text }]
-            }));
-            
-            // Add current user message
-            contents.push({ role: 'user', parts: [{ text: userMsg }] });
+            // OPTIMIZATION: Context Window Management
+            // 1. Filter out the static initial greeting to strictly follow API protocol (User first).
+            // 2. Slice to take only the last 10 messages. This keeps the prompt lean and fast (Flash Lite).
+            const contextHistory = newHistory
+                .filter((_, index) => index > 0) // Remove the initial "System Online" greeting (index 0)
+                .slice(-10) // Keep only last 10 turns for low latency
+                .map(m => ({
+                    role: m.role,
+                    parts: [{ text: m.text }]
+                }));
 
             const stream = await ai.models.generateContentStream({
                 model: 'gemini-2.5-flash-lite',
-                contents: contents,
+                contents: contextHistory,
                 config: {
                     systemInstruction: "Tu és um Engenheiro de Vídeo Sênior e Especialista em ComfyUI. Responde de forma técnica, direta e pragmática (Estilo 'Hard Tech'). Foca-te em FFmpeg, Upscaling, Deinterlacing (bwdif), e hardware Nvidia (RTX 3060). Evita floreados. Dá exemplos de código ou JSON quando relevante.",
                 }
@@ -64,15 +67,15 @@ export const AiHelpTab: React.FC = () => {
                 if (chunkText) {
                     fullResponse += chunkText;
                     setMessages(prev => {
-                        const newHistory = [...prev];
-                        newHistory[newHistory.length - 1].text = fullResponse;
-                        return newHistory;
+                        const updated = [...prev];
+                        updated[updated.length - 1].text = fullResponse;
+                        return updated;
                     });
                 }
             }
         } catch (error) {
             console.error(error);
-            setMessages(prev => [...prev, { role: 'model', text: 'ERRO: Falha na comunicação com o núcleo de IA. Verifique a API Key ou a conexão.' }]);
+            setMessages(prev => [...prev, { role: 'model', text: 'ERRO CRÍTICO: Falha na conexão com o núcleo neural (API Error). Verifique a chave de acesso.' }]);
         } finally {
             setIsThinking(false);
         }
@@ -96,7 +99,7 @@ export const AiHelpTab: React.FC = () => {
                     <h2 className="text-sm font-bold text-white uppercase tracking-wider">Engenharia Assistida (Flash-Lite)</h2>
                     <p className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                        LATENCY: LOW
+                        LATENCY: OPTIMIZED
                     </p>
                 </div>
             </div>
@@ -148,7 +151,7 @@ export const AiHelpTab: React.FC = () => {
                     </button>
                 </div>
                 <div className="text-[10px] text-slate-600 mt-2 text-center font-mono">
-                    MODEL: gemini-2.5-flash-lite • CONTEXT: TECHNICAL
+                    MODEL: gemini-2.5-flash-lite • WINDOW: 10 TURNS
                 </div>
             </div>
         </div>

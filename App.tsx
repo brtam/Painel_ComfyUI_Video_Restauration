@@ -5,32 +5,54 @@ import { AiHelpTab } from './components/AiHelpTab';
 import { PrereqModal } from './components/PrereqModal';
 import { GetIcon } from './components/Icons';
 import { INITIAL_WORKFLOW } from './constants';
-import { Step, TabType } from './types';
+import { Step, Task, TabType } from './types';
 
 const App: React.FC = () => {
     const [activeTab, setActiveTab] = useState<TabType>('workflow');
     const [showModal, setShowModal] = useState(true);
     const [workflowData, setWorkflowData] = useState<Step[]>(INITIAL_WORKFLOW);
+    const [isLoaded, setIsLoaded] = useState(false);
 
-    // Persistence Logic
+    // Smart Persistence Logic (Hydration)
     useEffect(() => {
         try {
             const saved = localStorage.getItem('central_v4');
             if (saved) {
                 const parsed = JSON.parse(saved);
-                // Simple validation check before setting state
+                
                 if (Array.isArray(parsed) && parsed.length > 0) {
-                    setWorkflowData(parsed);
+                    // Critical Fix: Don't just replace state with saved data.
+                    // Merge saved 'done' status onto the FRESH INITIAL_WORKFLOW structure.
+                    // This ensures users get UI updates (new icons, descriptions, visualTypes)
+                    // while keeping their progress checkmarks.
+                    const mergedData = INITIAL_WORKFLOW.map(freshStep => {
+                        const savedStep = parsed.find((s: Step) => s.id === freshStep.id);
+                        if (!savedStep) return freshStep;
+
+                        return {
+                            ...freshStep, // Keep fresh metadata (title, icon, visualType)
+                            tasks: freshStep.tasks.map(freshTask => {
+                                const savedTask = savedStep.tasks.find((t: Task) => t.id === freshTask.id);
+                                // Only restore the 'done' status, keep text/details fresh
+                                return savedTask ? { ...freshTask, done: savedTask.done } : freshTask;
+                            })
+                        };
+                    });
+                    setWorkflowData(mergedData);
                 }
             }
         } catch (e) {
             console.error("Failed to load state", e);
+        } finally {
+            setIsLoaded(true);
         }
     }, []);
 
     useEffect(() => {
-        localStorage.setItem('central_v4', JSON.stringify(workflowData));
-    }, [workflowData]);
+        if (isLoaded) {
+            localStorage.setItem('central_v4', JSON.stringify(workflowData));
+        }
+    }, [workflowData, isLoaded]);
 
     const toggleTask = (stepId: string, taskId: string) => {
         setWorkflowData(prev => prev.map(step => {

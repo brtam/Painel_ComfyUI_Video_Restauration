@@ -57,7 +57,9 @@ export const StepCard: React.FC<StepCardProps> = ({ step, onToggleTask }) => {
                         <div className="flex items-start gap-4">
                             <button 
                                 onClick={() => onToggleTask(step.id, task.id)}
-                                className="mt-1 transition-transform active:scale-95 focus:outline-none"
+                                className="mt-1 transition-transform active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-cyan-500 rounded-full"
+                                aria-label={task.done ? "Marcar como não feito" : "Marcar como feito"}
+                                aria-pressed={task.done}
                             >
                                 {task.done 
                                     ? GetIcon('check', "w-6 h-6 text-emerald-500") 
@@ -67,7 +69,10 @@ export const StepCard: React.FC<StepCardProps> = ({ step, onToggleTask }) => {
                             
                             <div className="flex-1">
                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-2">
-                                    <span className={`font-medium ${task.done ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
+                                    <span 
+                                        onClick={() => onToggleTask(step.id, task.id)}
+                                        className={`font-medium cursor-pointer select-none transition-colors ${task.done ? 'text-slate-500 line-through' : 'text-slate-200 hover:text-white'}`}
+                                    >
                                         {task.text}
                                     </span>
                                     
@@ -75,7 +80,7 @@ export const StepCard: React.FC<StepCardProps> = ({ step, onToggleTask }) => {
                                         <button 
                                             onClick={() => handleAction(task.id, task.actionType)}
                                             disabled={loadingAction === task.id}
-                                            className={`flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-white rounded shadow-lg transition-all transform border whitespace-nowrap
+                                            className={`flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-white rounded shadow-lg transition-all transform border whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-blue-400
                                                 ${loadingAction === task.id 
                                                     ? 'bg-cyan-700 border-cyan-500 scale-95 cursor-wait opacity-90 shadow-inner' 
                                                     : 'bg-blue-600 hover:bg-blue-500 hover:-translate-y-0.5 border-blue-400/30'
@@ -107,7 +112,7 @@ export const StepCard: React.FC<StepCardProps> = ({ step, onToggleTask }) => {
                                 <div>
                                     <button 
                                         onClick={() => setExpandedDetail(expandedDetail === task.id ? null : task.id)}
-                                        className="text-xs text-cyan-500 hover:text-cyan-300 flex items-center gap-1 font-semibold transition-colors mt-1 focus:outline-none"
+                                        className="text-xs text-cyan-500 hover:text-cyan-300 flex items-center gap-1 font-semibold transition-colors mt-1 focus:outline-none focus:underline"
                                     >
                                         {GetIcon('info', "w-3 h-3")}
                                         {expandedDetail === task.id ? "Ocultar Detalhes" : "Como fazer?"}
