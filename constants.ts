@@ -1,41 +1,81 @@
 import { Step } from './types';
 
 export const BAT_CONTENT = `@echo off
-:: Central de Restauro - Script de Pre-Processamento (v4.0)
-:: Objetivo: Preparar Mini DV para IA (Desentrelaçar + Pixel Quadrado)
+:: Central de Restauro - Script Hibrido (v6.0 - Selectable Mode)
+:: Objetivo: Processamento inteligente baseado na fonte (Analógico vs Digital)
 
 if "%~1" == "" (
+    cls
+    color 0E
     echo.
     echo ========================================================
-    echo   ERRO: NENHUM FICHEIRO DE VIDEO ENCONTRADO
+    echo   MODO DE ESPERA (v6.0)
     echo ========================================================
-    echo   Por favor, ARRASTE E SOLTE o seu ficheiro de video (.mp4)
-    echo   diretamente sobre este icone do script.
-    echo ========================================================
+    echo.
+    echo   Para processar, ARRASTE o video sobre este arquivo.
     echo.
     pause
     exit
 )
 
+color 0B
+cls
+echo ========================================================
+echo   DIAGNOSTICO DE FONTE
+echo ========================================================
+echo.
+echo   Arquivo detectado: %~nx1
+echo.
+echo   Identifique a origem do material para definir a engenharia:
+echo.
+echo   [1] ANALOGICO / ENTRELACADO (VHS, MiniDV, TV Antiga)
+echo       - Acao: Aplica filtro "bwdif" (Desentrelaçar 60fps)
+echo       - Use se ver "riscas horizontais" (combing) na imagem.
+echo.
+echo   [2] DIGITAL / PROGRESSIVO (Internet, Celular, Rips)
+echo       - Acao: Pass-through (Mantem pixels originais)
+echo       - Apenas padroniza o codec para CRF 16 (Alta Qualidade).
+echo       - RECOMENDADO PARA SEU ARQUIVO "SANTA CATARINA.mp4"
+echo.
+set /p mode="> Digite 1 ou 2 e pressione ENTER (Padrao=2): " || set mode=2
+
+if "%mode%"=="1" goto MODE_INTERLACED
+if "%mode%"=="2" goto MODE_PROGRESSIVE
+goto MODE_PROGRESSIVE
+
+:MODE_INTERLACED
+set "filters=-vf bwdif=mode=1,scale=iw*sar:ih"
+set "tag=_fixed_analog"
+goto PROCESS
+
+:MODE_PROGRESSIVE
+:: Apenas garante Pixel Quadrado se necessario, sem desentrelaçar
+set "filters=-vf scale=iw*sar:ih"
+set "tag=_optimized_digital"
+goto PROCESS
+
+:PROCESS
+cd /d "%~dp0"
 if not exist "pronto_para_ai" mkdir "pronto_para_ai"
 
+cls
 echo.
-echo [1/3] A detetar ficheiro: %~n1
-echo [2/3] A aplicar correcoes (bwdif=1 + square pixel)...
+echo   ENGENHARIA EM ANDAMENTO...
+echo   Modo: %mode% | Filtros: %filters%
 echo.
 
-:: COMANDO FFMPEG OTIMIZADO PARA MINI DV:
-:: - bwdif=mode=1: 60fps progressivo (fluidez total)
-:: - scale=iw*sar:ih: Corrige distorcao de aspeto
-:: - crf 16: Qualidade de arquivo (quase lossless)
+ffmpeg -i "%~1" %filters% -c:v libx264 -preset slow -crf 16 -c:a copy "pronto_para_ai\%~n1%tag%.mp4"
 
-ffmpeg -i "%~1" -vf "bwdif=mode=1,scale=iw*sar:ih" -c:v libx264 -preset slow -crf 16 -c:a copy "pronto_para_ai\%~n1_fixed.mp4"
+if %errorlevel% neq 0 (
+    color 0C
+    echo [ERRO] Falha no FFMPEG.
+    pause
+    exit
+)
 
+color 0A
 echo.
-echo [3/3] CONCLUIDO! 
-echo.
-echo O video corrigido esta na pasta: "pronto_para_ai"
-echo Utilize ESTE ficheiro no ComfyUI.
+echo   [SUCESSO] Arquivo gerado em "pronto_para_ai"
 echo.
 pause`;
 
@@ -121,38 +161,30 @@ export const WORKFLOW_JSON = {
 export const INITIAL_WORKFLOW: Step[] = [
     {
         id: 'step1',
-        title: 'Passo 1: Preparar o Vídeo',
-        description: 'Correção física do sinal (Entrelaçamento & Pixel).',
-        icon: 'film',
-        color: 'bg-cyan-500',
-        textColor: 'text-cyan-400',
-        badge: 'OBRIGATÓRIO',
+        title: 'Passo 1: Padronização Híbrida',
+        description: 'Seletor inteligente: Analógico (Desentrelaça) vs Digital (Otimiza).',
+        icon: 'cpu',
+        color: 'bg-blue-600', 
+        textColor: 'text-blue-300',
+        badge: 'ATUALIZADO v6.0',
         tasks: [
             {
-                id: 'check_ffmpeg',
-                text: '1. Verificar se o FFmpeg está instalado',
-                location: 'Prompt de Comando (Windows)',
-                locationColor: 'bg-slate-600',
-                detail: 'Abra o menu Iniciar, digite "cmd", abra-o e escreva "ffmpeg -version". Se der erro, precisa instalar o FFmpeg primeiro.',
-                done: false
-            },
-            {
                 id: 'dl_script',
-                text: '2. Descarregar Script de Correção (.bat)',
-                location: 'Mesma pasta do vídeo original',
-                locationColor: 'bg-blue-500',
-                detail: 'Clique no botão para descarregar o "prepara_minidv.bat". Este script contém os comandos exatos para transformar o vídeo de TV antiga em vídeo de PC (60fps).',
+                text: '1. Descarregar "Engenheiro de Video v6.0"',
+                location: 'Pasta do Projeto',
+                locationColor: 'bg-blue-600',
+                detail: 'Script atualizado. Ao executar, digite "2" para o seu arquivo "SANTA CATARINA.mp4" (Progressivo).',
                 actionType: 'download',
-                actionLabel: 'DESCARREGAR SCRIPT',
-                technicalNote: 'Usa filtro bwdif=mode=1 para 60fps progressivo e scale=iw*sar:ih para pixels quadrados.',
+                actionLabel: 'BAIXAR SCRIPT HÍBRIDO v6.0',
+                technicalNote: 'v6.0: Adicionado menu de seleção. Modo 2 evita filtros destrutivos em mídia digital.',
                 done: false
             },
             {
                 id: 'run_script',
-                text: '3. Executar a Correção',
-                location: 'Explorador de Ficheiros',
-                locationColor: 'bg-orange-500',
-                detail: 'Pegue no ficheiro do seu vídeo (ex: "natal_98.mp4") e ARRASTE-O para cima do ícone do "prepara_minidv.bat". Uma janela preta vai abrir e criar uma pasta "pronto_para_ai".',
+                text: '2. Processar Arquivo',
+                location: 'CMD / Explorer',
+                locationColor: 'bg-slate-600',
+                detail: 'Arraste o vídeo para o .bat e escolha a opção correta no menu preto que abrir.',
                 done: false
             }
         ]
@@ -170,10 +202,10 @@ export const INITIAL_WORKFLOW: Step[] = [
                 text: '1. Descarregar Workflow (.json)',
                 location: 'Pasta de Transferências',
                 locationColor: 'bg-blue-500',
-                detail: 'Descarregue o ficheiro de estrutura do workflow. Este é o cérebro da operação.',
+                detail: 'Estrutura de nós otimizada para Upscale 4x.',
                 actionType: 'download',
                 actionLabel: 'DESCARREGAR JSON',
-                technicalNote: 'Contém nós VHS, UpscaleModelLoader e ImageUpscaleWithModel pré-conectados com Remacri.',
+                technicalNote: 'Workflow padrão (UpscaleModelLoader -> ImageUpscaleWithModel).',
                 done: false
             },
             {
@@ -181,23 +213,23 @@ export const INITIAL_WORKFLOW: Step[] = [
                 text: '2. Importar no ComfyUI',
                 location: 'Janela do ComfyUI',
                 locationColor: 'bg-purple-500',
-                detail: 'Arraste o ficheiro .json que acabou de descarregar para dentro da janela do ComfyUI. Os nós vão aparecer.',
+                detail: 'Arraste o JSON para a interface.',
                 done: false
             },
             {
                 id: 'install_missing',
-                text: '3. Instalar Nós em Falta',
+                text: '3. Instalar Dependências',
                 location: 'ComfyUI Manager',
                 locationColor: 'bg-red-500',
-                detail: 'Se vir caixas vermelhas, clique em "Manager" > "Install Missing Custom Nodes". Instale tudo e reinicie.',
+                detail: 'Use o Manager para instalar nós faltantes (VHS Video Helper, etc).',
                 done: false
             }
         ]
     },
     {
         id: 'step3',
-        title: 'Passo 3: Executar (Render)',
-        description: 'Configuração final e início.',
+        title: 'Passo 3: Renderização Final',
+        description: 'Upscale 4x (Resultante: ~1440p)',
         icon: 'play',
         color: 'bg-emerald-500',
         textColor: 'text-emerald-400',
@@ -205,26 +237,18 @@ export const INITIAL_WORKFLOW: Step[] = [
         tasks: [
             {
                 id: 'select_video',
-                text: '1. Carregar Vídeo Corrigido',
-                location: 'Nó "VHS Load Video" (Laranja)',
+                text: '1. Carregar Vídeo Otimizado',
+                location: 'Nó VHS Load Video',
                 locationColor: 'bg-orange-500',
-                detail: 'Clique em "Upload Video" e navegue até à pasta "pronto_para_ai". Selecione o ficheiro que termina em "_fixed.mp4". NÃO use o original.',
-                done: false
-            },
-            {
-                id: 'check_res',
-                text: '2. Validar Resolução (1440x1080)',
-                location: 'Nós de Configuração',
-                locationColor: 'bg-slate-500',
-                detail: 'Certifique-se de que a saída não está em 4K. Use 1440x1080 (4:3) para evitar sobrecarga.',
+                detail: 'Selecione o arquivo da pasta "pronto_para_ai" (terminado em _optimized_progressive.mp4).',
                 done: false
             },
             {
                 id: 'queue',
-                text: '3. Iniciar (Queue Prompt)',
-                location: 'Barra lateral direita',
+                text: '2. Iniciar Processamento',
+                location: 'Queue Prompt',
                 locationColor: 'bg-emerald-600',
-                detail: 'Clique em Queue Prompt. O processamento vai começar. Acompanhe a barra verde.',
+                detail: 'O modelo Remacri vai multiplicar sua resolução de 490x360 por 4x (1960x1440).',
                 done: false
             }
         ]
