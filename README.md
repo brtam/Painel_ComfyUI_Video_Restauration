@@ -12,9 +12,19 @@ View your app in AI Studio: https://ai.studio/apps/drive/10i3D-HiUyyRYMItmbX1g6J
 
 **Prerequisites:**  Node.js
 
-
 1. Install dependencies:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
+2. Run the app:
    `npm run dev`
+
+The "Ajuda IA" aba opera 100% offline usando roteiros locais; não é necessário configurar nenhuma API.
+
+## Como usar (versão simples)
+
+1. Instale o Node.js (qualquer versão LTS). Não precisa de mais nada.
+2. No terminal, rode `npm install` uma vez e depois `npm run dev` para abrir o app.
+3. Preencha as etapas do painel na ordem: pré-requisitos, geração e exportação.
+4. Na aba **Ajuda IA**, clique em um atalho ou escreva com suas palavras. As respostas vêm de roteiros locais, sem internet ou chave de API.
+5. Use a aba **Toolbox** para calcular bitrate ou VRAM em situações comuns (por exemplo, exportar para YouTube ou ajustar lotes da GPU).
+
+Se algo parecer estranho, basta fechar o app e abrir novamente: ele volta ao estado padrão sem risco para sua máquina.
